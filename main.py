@@ -1,24 +1,21 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
-import models
+import models 
 import schemas
-from database import engine , get_db
+from database import engine, get_db
 from typing import List
+
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="TODO API")
+app = FastAPI(title="USER API")
 
+@app.post("/todos", response_model=schemas.TodoResponse)
+def create_todos(todo: schemas.TodoCreate, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == todo.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-
-@app.get("/todos", response_model = List[schemas.TodoResponse])
-def read(db: Session = Depends(get_db)):
-    todos = db.query(models.Todo).all()
-    return todos
-
-
-@app.post("/todos",response_model = schemas.TodoResponse)
-def create(todo: schemas.TodoCreate, db: Session = Depends(get_db)):
     db_todo = models.Todo(**todo.dict())
     db.add(db_todo)
     db.commit()
@@ -33,25 +30,25 @@ def read_todo(todo_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code = 404, detail = "task cannot be found")
     return todo
 
-@app.put("/todos/{todo_id}", response_model=schemas.TodoResponse)
-def update_todo(todo_id: int, todo: schemas.TodoCreate, db: Session = Depends(get_db)):
-    db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id).first()
-    if db_todo is None:
-        raise HTTPException(status_code=404, detail="task not found")
-    
-    for key, value in todo.dict(exclude_unset=True).items():
-        setattr(db_todo, key, value)
-
+@app.post("/users", response_model=schemas.UserResponse)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = models.User(name=user.name, phone=user.phone)
+    db.add(db_user)
     db.commit()
-    db.refresh(db_todo)
-    return db_todo
+    db.refresh(db_user)
+    return db_user
 
+@app.get("/users/{user_id}",response_model = schemas.Userbase)
+def fetch_user(user_id: int, db: Session = Depends(get_db)):
+    user_details = db.query(models.User).filter(models.User.id == user_id).first()
+    if user_details is None:
+        raise HTTPException(status_code = 404, detail = "user not found")
+    return user_details
+@app.get("/users/{user_id}/todos", response_model=List[schemas.TodoResponse])
+def get_user_todos(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-@app.delete("/todos/{todo_id}")
-def delete_todo(todo_id: int, db: Session = Depends(get_db)):
-    db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id).first()
-    if db_todo is None:
-        raise HTTPException(status_code=404, detail = "Task not found")
-    db.delete(db_todo)
-    db.commit()
-    return {"detail": "Todo deleted successfully"}
+    return user.todos
+
