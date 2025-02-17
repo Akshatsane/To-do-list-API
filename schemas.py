@@ -17,10 +17,14 @@ class TodoResponse(Todo):
 
 class Userbase(BaseModel):
     name: str
-    phone: int
+    email: str
 
 class UserCreate(Userbase):
-    pass
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    access_type: str
 
 class UserResponse(Userbase):
     id: int
