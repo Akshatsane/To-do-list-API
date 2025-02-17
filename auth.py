@@ -62,11 +62,8 @@ def get_current_user(token: str = Depends(oauth2), db: Session = Depends(get_db)
     )
 
     try:
-        print(f"Received Token: {token}")  #  Debugging line
         
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        print(f"Decoded JWT Payload: {payload}")  #  Debugging line
-
         user_id = payload.get("sub")
         if user_id is None:
             raise credentials_exception
@@ -79,7 +76,6 @@ def get_current_user(token: str = Depends(oauth2), db: Session = Depends(get_db)
         
         return user
 
-    except JWTError as e:
-        print(f"JWTError Occurred: {e}")  # Debugging line
+    except JWTError:
         raise credentials_exception
 
